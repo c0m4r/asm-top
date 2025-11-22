@@ -2,6 +2,17 @@
 
 A lightweight system monitoring tool written in pure x86-64 assembly for Linux. Displays real-time CPU and RAM usage statistics similar to the `top` command.
 
+```
+=== ASM-TOP - localhost @ 09:56:14 ===
+uptime: 21h 59m  load: 0.96 1.23 1.37 
+Tasks: 1662 total, 2 running
+CPU:  [######..................................] 16%
+RAM:  [############################............] 71% (5 GB/7 GB)
+SWAP: [###.....................................] 8% (1 GB/16 GB)
+
+Press 'q' to exit
+```
+
 ## Features
 
 - **CPU Monitoring**: Real-time CPU usage percentage
