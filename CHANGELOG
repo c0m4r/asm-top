@@ -1,2 +1,3 @@
-0.1.0 / 2025-12-11 - first working program: CPU and MEM monitoring
-0.2.0 / 2025-12-11 - load average and uptime
+0.1.0 / 2025-11-22 - first working program: CPU and MEM monitoring
+0.2.0 / 2025-11-22 - load average and uptime
+0.3.0 / 2025-11-22 - SWAP, Used/Total size, tasks breakdown
