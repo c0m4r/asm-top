@@ -5,5 +5,5 @@ make
 
 # How to install
 
-sudo cp asm-top /usr/local/bin/
+sudo mv asm-top /usr/local/bin/
 sudo chmod +x /usr/local/bin/asm-top
