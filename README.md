@@ -8,7 +8,7 @@ A lightweight system monitoring tool written in pure x86-64 assembly for Linux. 
 - **Memory Monitoring**: Real-time RAM usage percentage
 - **Visual Progress Bars**: Text-based bars showing resource utilization
 - **System Info Display**: Shows hostname and current time (HH:MM:SS)
-- **Interactive Controls**: Press 'q' to quit, or use Ctrl+C
+- **Interactive Controls**: Press 'q' to quit
 - **Minimal Dependencies**: Pure assembly, no external libraries
 - **Lightweight**: Extremely small binary size (13KB) and minimal resource usage
 
@@ -58,7 +58,7 @@ The display will update every second showing:
 - CPU usage percentage with a visual progress bar
 - RAM usage percentage with a visual progress bar
 
-Press `q` to quit gracefully, or press `Ctrl+C` to exit.
+Press `q` to quit gracefully.
 
 ## Technical Details
 
