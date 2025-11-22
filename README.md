@@ -15,8 +15,8 @@ A lightweight system monitoring tool written in pure x86-64 assembly for Linux. 
 ## Quick install (x86_64 GNU/Linux)
 
 ```bash
-wget https://github.com/c0m4r/asm-top/releases/download/0.1.0/asm-top
-echo "5bfb9e210486d5be35bff6e2601356dabfc55eee9cdbe63192a6133b998580fa  asm-top" | sha256sum -c || rm -f asm-top
+wget https://github.com/c0m4r/asm-top/releases/download/0.2.0/asm-top
+echo "10efacf4673df0057bf16c1f4701603b9192c07bea2770615526ef8ff4034796  asm-top" | sha256sum -c || rm -f asm-top
 sudo mv asm-top /usr/local/bin/
 sudo chmod +x /usr/local/bin/asm-top
 asm-top
