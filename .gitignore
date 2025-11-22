@@ -1,0 +1,12 @@
+# Build artifacts
+*.o
+asm-top
+
+# Backup files
+*~
+*.swp
+*.swo
+
+# Debug files
+*.elf
+*.map
