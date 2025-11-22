@@ -24,6 +24,8 @@ Press 'q' to exit
 - **Minimal Dependencies**: Pure assembly, no external libraries
 - **Lightweight**: Extremely small binary size (13KB) and minimal resource usage
 
+<img width="679" height="71" alt="image" src="https://github.com/user-attachments/assets/580725b0-0f97-4ee6-a43b-09af0103afe0" />
+
 ## Quick install (x86_64 GNU/Linux)
 
 ```bash
