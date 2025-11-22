@@ -3,6 +3,9 @@
 asm-top
 asm-top*
 
+# Configure generated files
+config.mk
+
 # Backup files
 *~
 *.swp
