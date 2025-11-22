@@ -15,7 +15,7 @@ section .data
     mem_label: db "RAM:  [", 0
     bar_end: db "] ", 0
     percent_sign: db "%", 10, 0
-    exit_msg: db 10, "Press 'q' or Ctrl+C to exit", 10, 0
+    exit_msg: db 10, "Press 'q' to exit", 10, 0
     newline: db 10, 0           ; Just a newline character
     
     bar_fill: db "#", 0
