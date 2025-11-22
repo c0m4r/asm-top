@@ -11,6 +11,8 @@ section .data
     header: db "=== ASM-TOP - ", 0
     header_at: db " @ ", 0
     header_end: db " ===", 10, 0
+    uptime_label: db "uptime: ", 0
+    load_label: db "  load: ", 0
     cpu_label: db "CPU:  [", 0
     mem_label: db "RAM:  [", 0
     bar_end: db "] ", 0
@@ -30,6 +32,8 @@ extern int_to_str
 extern strlen
 extern get_hostname
 extern get_time_string
+extern get_uptime_string
+extern get_load_average_string
 
 global display_init
 global display_cleanup
@@ -204,6 +208,25 @@ display_stats:
     
     ; Print header end
     mov rdi, header_end
+    call print_string
+    
+    ; Print uptime line
+    mov rdi, uptime_label
+    call print_string
+    
+    call get_uptime_string
+    mov rdi, rax
+    call print_string
+    
+    mov rdi, load_label
+    call print_string
+    
+    call get_load_average_string
+    mov rdi, rax
+    call print_string
+    
+    ; Print newline
+    mov rdi, newline
     call print_string
     
     ; Print CPU label
