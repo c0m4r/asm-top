@@ -33,6 +33,7 @@ asm-top
 ### Compile
 
 ```bash
+./configure
 make
 ```
 
@@ -42,7 +43,12 @@ This will create the `asm-top` executable.
 
 ```bash
 make clean
-make
+```
+
+### Install
+
+```bash
+make install
 ```
 
 ## Usage
