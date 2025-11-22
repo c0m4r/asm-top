@@ -22,7 +22,7 @@ Press 'q' to exit
 - **System Info Display**: Shows hostname and current time (HH:MM:SS)
 - **Interactive Controls**: Press 'q' to quit
 - **Minimal Dependencies**: Pure assembly, no external libraries
-- **Lightweight**: Extremely small binary size (~26KB) and minimal resource usage
+- **Lightweight**: Extremely small binary size (~21KB) and minimal resource usage
 
 <img width="679" height="71" alt="image" src="https://github.com/user-attachments/assets/580725b0-0f97-4ee6-a43b-09af0103afe0" />
 
