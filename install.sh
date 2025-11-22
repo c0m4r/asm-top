@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
-sudo cp asm-top /usr/local/bin/
-sudo chmod +x /usr/local/bin/asm-top
+cp asm-top /usr/local/bin/
+chmod +x /usr/local/bin/asm-top
