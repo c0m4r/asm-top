@@ -27,8 +27,8 @@ Press 'q' to exit
 ## Quick install (x86_64 GNU/Linux)
 
 ```bash
-wget https://github.com/c0m4r/asm-top/releases/download/0.2.0/asm-top
-echo "10efacf4673df0057bf16c1f4701603b9192c07bea2770615526ef8ff4034796  asm-top" | sha256sum -c || rm -f asm-top
+wget https://github.com/c0m4r/asm-top/releases/download/0.3.0/asm-top
+echo "8bd5b3c06cb24da31444805fdf0a62c8a9bc6c1b7e86098a095ba19d4026e138  asm-top" | sha256sum -c || rm -f asm-top
 sudo mv asm-top /usr/local/bin/
 sudo chmod +x /usr/local/bin/asm-top
 asm-top
