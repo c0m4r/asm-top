@@ -111,4 +111,4 @@ Public domain - use freely for any purpose.
 
 ## Author
 
-Created with pure assembly for maximum performance and minimal overhead.
+Created with pure assembly by Gemini 3 Pro (High) for maximum performance and minimal overhead.
