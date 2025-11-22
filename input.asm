@@ -23,7 +23,11 @@ global check_input
 check_input:
     push rbp
     mov rbp, rsp
+    push rbx
     
+    xor rbx, rbx                ; rbx = 0 (default return value)
+
+.loop:
     ; Set up pollfd structure
     mov dword [poll_fd], 0      ; stdin (fd 0)
     mov word [poll_events], POLLIN
@@ -37,12 +41,12 @@ check_input:
     
     ; Check if poll returned any events
     cmp rax, 0
-    jle .no_input               ; no input or error
+    jle .done                   ; no more input
     
     ; Check if POLLIN is set
     movzx rax, word [poll_revents]
     test rax, POLLIN
-    jz .no_input
+    jz .done
     
     ; Read one character
     xor rdi, rdi                ; stdin
@@ -51,25 +55,23 @@ check_input:
     call sys_read
     
     cmp rax, 0
-    jle .no_input
+    jle .done
     
     ; Check if it's 'q' or 'Q'
     movzx rax, byte [input_char]
     cmp al, 'q'
-    je .quit
+    je .set_quit
     cmp al, 'Q'
-    je .quit
+    je .set_quit
     
-    ; Return the character
-    pop rbp
-    ret
-    
-.quit:
-    mov rax, -1                 ; signal to quit
-    pop rbp
-    ret
-    
-.no_input:
-    xor rax, rax                ; no input
+    jmp .loop                   ; Check for more input
+
+.set_quit:
+    mov rbx, -1                 ; signal to quit
+    jmp .loop                   ; Continue draining buffer
+
+.done:
+    mov rax, rbx
+    pop rbx
     pop rbp
     ret

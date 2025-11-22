@@ -6,6 +6,8 @@ section .data
     clear_screen: db 27, "[2J", 27, "[H", 0    ; Clear screen and move cursor home
     hide_cursor: db 27, "[?25l", 0              ; Hide cursor
     show_cursor: db 27, "[?25h", 0              ; Show cursor
+    alt_buffer_on: db 27, "[?1049h", 0          ; Enable alternate buffer
+    alt_buffer_off: db 27, "[?1049l", 0         ; Disable alternate buffer
     
     ; Display strings
     header: db "=== ASM-TOP - ", 0
@@ -65,6 +67,15 @@ display_init:
     mov rsi, clear_screen
     call sys_write
     
+    ; Enable alternate buffer
+    mov rdi, alt_buffer_on
+    call strlen
+    mov rdx, rax
+    
+    mov rdi, 1
+    mov rsi, alt_buffer_on
+    call sys_write
+    
     ; Hide cursor
     mov rdi, hide_cursor
     call strlen
@@ -87,6 +98,15 @@ display_cleanup:
     mov rdi, 1
     mov rsi, newline
     mov rdx, 1
+    call sys_write
+    
+    ; Disable alternate buffer (restores original screen)
+    mov rdi, alt_buffer_off
+    call strlen
+    mov rdx, rax
+    
+    mov rdi, 1
+    mov rsi, alt_buffer_off
     call sys_write
     
     ; Show cursor
