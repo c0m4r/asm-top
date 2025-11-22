@@ -15,13 +15,17 @@ section .data
     load_label: db "  load: ", 0
     cpu_label: db "CPU:  [", 0
     mem_label: db "RAM:  [", 0
+    swap_label: db "SWAP: [", 0
     bar_end: db "] ", 0
-    percent_sign: db "%", 10, 0
+    percent_sign: db "%", 0
     exit_msg: db 10, "Press 'q' to exit", 10, 0
     newline: db 10, 0           ; Just a newline character
     
     bar_fill: db "#", 0
     bar_empty: db ".", 0
+    space_paren: db " (", 0
+    slash: db "/", 0
+    paren_end: db ")", 0
 
 section .bss
     temp_buffer: resb 64        ; Temporary buffer for number conversion
@@ -34,6 +38,13 @@ extern get_hostname
 extern get_time_string
 extern get_uptime_string
 extern get_load_average_string
+extern get_tasks_string
+extern calculate_swap_percent
+extern get_mem_total_kb
+extern get_mem_used_kb
+extern get_swap_total_kb
+extern get_swap_used_kb
+extern format_size_kb
 
 global display_init
 global display_cleanup
@@ -229,6 +240,15 @@ display_stats:
     mov rdi, newline
     call print_string
     
+    ; Print tasks line
+    call get_tasks_string
+    mov rdi, rax
+    call print_string
+    
+    ; Print newline
+    mov rdi, newline
+    call print_string
+    
     ; Print CPU label
     mov rdi, cpu_label
     call print_string
@@ -255,8 +275,12 @@ display_stats:
     pop rdx
     pop rax
     
-    ; Print percent sign and newline
+    ; Print percent sign
     mov rdi, percent_sign
+    call print_string
+    
+    ; Print newline
+    mov rdi, newline
     call print_string
     
     ; Print RAM label
@@ -284,8 +308,93 @@ display_stats:
     pop rdx
     pop rax
     
-    ; Print percent sign and newline
+    ; Print percent sign
     mov rdi, percent_sign
+    call print_string
+    
+    ; Print RAM size details " (Used/Total)"
+    mov rdi, space_paren
+    call print_string
+    
+    call get_mem_used_kb
+    mov rdi, rax                ; move result to argument
+    call format_size_kb
+    mov rdi, rax
+    call print_string
+    
+    mov rdi, slash
+    call print_string
+    
+    call get_mem_total_kb
+    mov rdi, rax                ; move result to argument
+    call format_size_kb
+    mov rdi, rax
+    call print_string
+    
+    mov rdi, paren_end
+    call print_string
+    
+    ; Print newline
+    mov rdi, newline
+    call print_string
+    
+    ; Print SWAP label
+    mov rdi, swap_label
+    call print_string
+    
+    ; Calculate SWAP percentage
+    call calculate_swap_percent
+    mov r14, rax                ; save SWAP%
+    
+    ; Render SWAP bar
+    mov rdi, r14
+    call render_bar
+    
+    ; Print bar end
+    mov rdi, bar_end
+    call print_string
+    
+    ; Print SWAP percentage
+    mov rdi, r14
+    mov rsi, temp_buffer
+    call int_to_str
+    
+    mov rdi, 1                  ; stdout
+    mov rsi, rax
+    push rax
+    push rdx
+    call sys_write
+    pop rdx
+    pop rax
+    
+    ; Print percent sign
+    mov rdi, percent_sign
+    call print_string
+    
+    ; Print SWAP size details " (Used/Total)"
+    mov rdi, space_paren
+    call print_string
+    
+    call get_swap_used_kb
+    mov rdi, rax                ; move result to argument
+    call format_size_kb
+    mov rdi, rax
+    call print_string
+    
+    mov rdi, slash
+    call print_string
+    
+    call get_swap_total_kb
+    mov rdi, rax                ; move result to argument
+    call format_size_kb
+    mov rdi, rax
+    call print_string
+    
+    mov rdi, paren_end
+    call print_string
+    
+    ; Print newline
+    mov rdi, newline
     call print_string
     
     ; Print exit message

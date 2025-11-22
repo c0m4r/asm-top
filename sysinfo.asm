@@ -17,6 +17,7 @@ section .bss
     uptime_seconds: resq 1      ; Uptime in seconds
     uptime_str_buf: resb 64     ; Formatted uptime string
     load_str_buf: resb 64       ; Formatted load average string
+    tasks_str_buf: resb 64      ; Formatted tasks string
     temp_buffer: resb 32        ; Temporary buffer for int_to_str
 
 section .text
@@ -27,11 +28,19 @@ extern sys_close
 extern sys_time
 extern int_to_str
 extern str_to_int
+extern find_char
 
 global get_hostname
 global get_time_string
 global get_uptime_string
+global get_hostname
+global get_time_string
+global get_uptime_string
+global get_hostname
+global get_time_string
+global get_uptime_string
 global get_load_average_string
+global get_tasks_string
 
 ; get_hostname - Get system hostname
 ; No arguments
@@ -418,8 +427,8 @@ get_load_average_string:
     jne .copy_loop
     inc r12
     
-    ; Stop after we've seen 2 spaces (which means 3 numbers copied)
-    cmp r12, 2
+    ; Stop after we've seen 3 spaces (which means 3 numbers copied)
+    cmp r12, 3
     jge .done_copy
     jmp .copy_loop
     
@@ -436,6 +445,180 @@ get_load_average_string:
     mov byte [load_str_buf], '?'
     mov byte [load_str_buf + 1], 0
     mov rax, load_str_buf
+    pop r12
+    pop rbx
+    pop rbp
+    ret
+
+; get_tasks_string - Get formatted tasks string "Tasks: X total, Y running"
+; No arguments
+; Returns: rax = pointer to string
+get_tasks_string:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push r12
+    push r13
+    
+    ; Open /proc/loadavg
+    mov rdi, loadavg_path
+    xor rsi, rsi
+    xor rdx, rdx
+    call sys_open
+    
+    cmp rax, 0
+    jl .error
+    mov rbx, rax
+    
+    ; Read loadavg
+    mov rdi, rbx
+    mov rsi, loadavg_buf
+    mov rdx, 127
+    call sys_read
+    
+    push rax
+    mov rdi, rbx
+    call sys_close
+    pop rax
+    
+    cmp rax, 0
+    jle .error
+    
+    mov byte [loadavg_buf + rax], 0
+    
+    ; Parse "1.68 1.54 1.65 2/1696 546110"
+    ; We need to find the 4th field (after 3 spaces)
+    mov rsi, loadavg_buf
+    xor rcx, rcx                ; space counter
+    
+.find_tasks:
+    movzx rax, byte [rsi]
+    test al, al
+    jz .error
+    
+    cmp al, ' '
+    jne .next_char
+    inc rcx
+    cmp rcx, 3
+    je .found_tasks
+    
+.next_char:
+    inc rsi
+    jmp .find_tasks
+    
+.found_tasks:
+    inc rsi                     ; Skip the 3rd space
+    ; Now rsi points to "2/1696" (running/total)
+    
+    ; Parse running count
+    mov rdi, rsi
+    call str_to_int
+    mov r12, rax                ; r12 = running
+    
+    ; Find '/'
+    mov rdi, rsi
+    mov sil, '/'
+    mov rdx, 20
+    call find_char
+    
+    test rax, rax
+    jz .error
+    
+    inc rax                     ; Skip '/'
+    mov rdi, rax
+    call str_to_int
+    mov r13, rax                ; r13 = total
+    
+    ; Format string: "Tasks: X total, Y running"
+    mov rdi, tasks_str_buf
+    
+    ; "Tasks: "
+    mov byte [rdi], 'T'
+    inc rdi
+    mov byte [rdi], 'a'
+    inc rdi
+    mov byte [rdi], 's'
+    inc rdi
+    mov byte [rdi], 'k'
+    inc rdi
+    mov byte [rdi], 's'
+    inc rdi
+    mov byte [rdi], ':'
+    inc rdi
+    mov byte [rdi], ' '
+    inc rdi
+    
+    ; Total
+    mov r8, rdi
+    mov rsi, temp_buffer
+    mov rdi, r13
+    call int_to_str
+    
+    mov rsi, rax
+    mov rdi, r8
+    mov rcx, rdx
+    rep movsb
+    
+    ; " total, "
+    mov byte [rdi], ' '
+    inc rdi
+    mov byte [rdi], 't'
+    inc rdi
+    mov byte [rdi], 'o'
+    inc rdi
+    mov byte [rdi], 't'
+    inc rdi
+    mov byte [rdi], 'a'
+    inc rdi
+    mov byte [rdi], 'l'
+    inc rdi
+    mov byte [rdi], ','
+    inc rdi
+    mov byte [rdi], ' '
+    inc rdi
+    
+    ; Running
+    mov r8, rdi
+    mov rsi, temp_buffer
+    mov rdi, r12
+    call int_to_str
+    
+    mov rsi, rax
+    mov rdi, r8
+    mov rcx, rdx
+    rep movsb
+    
+    ; " running"
+    mov byte [rdi], ' '
+    inc rdi
+    mov byte [rdi], 'r'
+    inc rdi
+    mov byte [rdi], 'u'
+    inc rdi
+    mov byte [rdi], 'n'
+    inc rdi
+    mov byte [rdi], 'n'
+    inc rdi
+    mov byte [rdi], 'i'
+    inc rdi
+    mov byte [rdi], 'n'
+    inc rdi
+    mov byte [rdi], 'g'
+    inc rdi
+    mov byte [rdi], 0
+    
+    mov rax, tasks_str_buf
+    pop r13
+    pop r12
+    pop rbx
+    pop rbp
+    ret
+    
+.error:
+    mov byte [tasks_str_buf], '?'
+    mov byte [tasks_str_buf + 1], 0
+    mov rax, tasks_str_buf
+    pop r13
     pop r12
     pop rbx
     pop rbp

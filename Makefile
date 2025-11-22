@@ -4,7 +4,8 @@ ASFLAGS = -f elf64
 LDFLAGS =
 
 TARGET = asm-top
-OBJECTS = main.o cpu.o memory.o syscalls.o utils.o display.o input.o sysinfo.o terminal.o
+TARGET = asm-top
+OBJECTS = main.o cpu.o memory.o syscalls.o utils.o display.o input.o sysinfo.o terminal.o format.o
 
 # Include configuration if it exists
 -include config.mk

@@ -5,7 +5,8 @@ A lightweight system monitoring tool written in pure x86-64 assembly for Linux. 
 ## Features
 
 - **CPU Monitoring**: Real-time CPU usage percentage
-- **Memory Monitoring**: Real-time RAM usage percentage
+- **Memory Monitoring**: Real-time RAM and Swap usage percentage with detailed stats
+- **System Stats**: Uptime, Load Average, and Task breakdown
 - **Visual Progress Bars**: Text-based bars showing resource utilization
 - **System Info Display**: Shows hostname and current time (HH:MM:SS)
 - **Interactive Controls**: Press 'q' to quit
@@ -61,8 +62,10 @@ Simply run the executable:
 
 The display will update every second showing:
 - Hostname and current time in the header
+- System Uptime, Load Average, and Task counts
 - CPU usage percentage with a visual progress bar
-- RAM usage percentage with a visual progress bar
+- RAM usage percentage with a visual progress bar and size details
+- Swap usage percentage with a visual progress bar and size details
 
 Press `q` to quit gracefully.
 
@@ -85,7 +88,9 @@ Press `q` to quit gracefully.
 
 ### Data Sources
 - **CPU**: `/proc/stat` - Parses total CPU time including user, nice, system, idle, iowait, irq, and softirq
-- **Memory**: `/proc/meminfo` - Extracts MemTotal and MemAvailable  
+- **Memory/Swap**: `/proc/meminfo` - Extracts MemTotal, MemAvailable, SwapTotal, and SwapFree
+- **Load/Tasks**: `/proc/loadavg` - Load averages and running/total tasks
+- **Uptime**: `/proc/uptime` - System uptime
 - **Hostname**: `/proc/sys/kernel/hostname` - System hostname
 - **Time**: `time()` syscall - Current Unix timestamp converted to HH:MM:SS
 
@@ -98,10 +103,13 @@ NonIdle = Total - Idle
 CPU% = ((NonIdle_now - NonIdle_prev) / (Total_now - Total_prev)) × 100
 ```
 
-### Memory Calculation
+### Memory and Swap Calculation
 ```
-Used = MemTotal - MemAvailable
-Memory% = (Used / MemTotal) × 100
+MemUsed = MemTotal - MemAvailable
+Memory% = (MemUsed / MemTotal) × 100
+
+SwapUsed = SwapTotal - SwapFree
+Swap% = (SwapUsed / SwapTotal) × 100
 ```
 
 ## Project Structure

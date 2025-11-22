@@ -5,11 +5,17 @@ section .data
     proc_meminfo_path: db "/proc/meminfo", 0
     memtotal_str: db "MemTotal:", 0
     memavail_str: db "MemAvailable:", 0
+    swaptotal_str: db "SwapTotal:", 0
+    swapfree_str: db "SwapFree:", 0
 
 section .bss
     mem_buffer: resb 4096       ; Buffer for /proc/meminfo content
     mem_total: resq 1           ; Total memory in kB
     mem_available: resq 1       ; Available memory in kB
+    mem_used: resq 1            ; Used memory in kB
+    swap_total: resq 1          ; Total swap in kB
+    swap_free: resq 1           ; Free swap in kB
+    swap_used: resq 1           ; Used swap in kB
 
 section .text
 extern sys_open
@@ -20,6 +26,11 @@ extern find_char
 
 global read_mem_info
 global calculate_mem_percent
+global calculate_swap_percent
+global get_mem_total_kb
+global get_mem_used_kb
+global get_swap_total_kb
+global get_swap_used_kb
 
 ; find_line - Find line starting with given prefix
 ; Arguments:
@@ -183,6 +194,76 @@ read_mem_info:
     call str_to_int
     mov [mem_available], rax
     
+    ; Calculate used memory
+    mov rax, [mem_total]
+    sub rax, [mem_available]
+    mov [mem_used], rax
+    
+    ; Find SwapTotal line
+    mov rdi, mem_buffer
+    mov rsi, r12
+    mov rdx, swaptotal_str
+    call find_line
+    
+    test rax, rax
+    jz .no_swap             ; No swap configured
+    
+    ; Parse SwapTotal
+    mov rdi, rax
+.skip_ws_swaptotal:
+    movzx rcx, byte [rdi]
+    cmp rcx, ' '
+    je .skip_ws_swaptotal_inc
+    cmp rcx, '\t'
+    je .skip_ws_swaptotal_inc
+    jmp .parse_swaptotal
+.skip_ws_swaptotal_inc:
+    inc rdi
+    jmp .skip_ws_swaptotal
+    
+.parse_swaptotal:
+    call str_to_int
+    mov [swap_total], rax
+    
+    ; Find SwapFree line
+    mov rdi, mem_buffer
+    mov rsi, r12
+    mov rdx, swapfree_str
+    call find_line
+    
+    test rax, rax
+    jz .no_swap
+    
+    ; Parse SwapFree
+    mov rdi, rax
+.skip_ws_swapfree:
+    movzx rcx, byte [rdi]
+    cmp rcx, ' '
+    je .skip_ws_swapfree_inc
+    cmp rcx, '\t'
+    je .skip_ws_swapfree_inc
+    jmp .parse_swapfree
+.skip_ws_swapfree_inc:
+    inc rdi
+    jmp .skip_ws_swapfree
+    
+.parse_swapfree:
+    call str_to_int
+    mov [swap_free], rax
+    
+    ; Calculate used swap
+    mov rax, [swap_total]
+    sub rax, [swap_free]
+    mov [swap_used], rax
+    jmp .success
+    
+.no_swap:
+    ; No swap configured
+    mov qword [swap_total], 0
+    mov qword [swap_free], 0
+    mov qword [swap_used], 0
+    
+.success:
     xor rax, rax                ; success
     pop r12
     pop rbx
@@ -226,4 +307,50 @@ calculate_mem_percent:
 .zero_usage:
     xor rax, rax
     pop rbp
+    ret
+
+; calculate_swap_percent - Calculate swap usage percentage
+; No arguments
+; Returns: rax = swap usage percentage (0-100)
+calculate_swap_percent:
+    push rbp
+    mov rbp, rsp
+    
+    mov rax, [swap_total]
+    test rax, rax
+    jz .zero_usage
+    
+    mov rax, [swap_used]
+    mov rdx, 100
+    imul rax, rdx
+    xor rdx, rdx
+    mov rcx, [swap_total]
+    div rcx
+    
+    pop rbp
+    ret
+    
+.zero_usage:
+    xor rax, rax
+    pop rbp
+    ret
+
+; get_mem_total_kb
+get_mem_total_kb:
+    mov rax, [mem_total]
+    ret
+
+; get_mem_used_kb
+get_mem_used_kb:
+    mov rax, [mem_used]
+    ret
+
+; get_swap_total_kb
+get_swap_total_kb:
+    mov rax, [swap_total]
+    ret
+
+; get_swap_used_kb
+get_swap_used_kb:
+    mov rax, [swap_used]
     ret
