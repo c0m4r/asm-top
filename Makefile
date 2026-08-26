@@ -5,7 +5,7 @@ LDFLAGS =
 
 TARGET = asm-top
 TARGET = asm-top
-OBJECTS = main.o cpu.o memory.o syscalls.o utils.o display.o input.o sysinfo.o terminal.o format.o
+OBJECTS = main.o cpu.o memory.o syscalls.o utils.o display.o input.o sysinfo.o terminal.o signals.o format.o
 
 # Include configuration if it exists
 -include config.mk

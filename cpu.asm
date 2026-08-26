@@ -1,5 +1,6 @@
 ; cpu.asm - CPU monitoring functions
 ; Intel syntax
+default abs
 
 section .data
     proc_stat_path: db "/proc/stat", 0
@@ -24,19 +25,24 @@ global init_cpu
 
 ; init_cpu - Initialize CPU monitoring (first reading)
 ; No arguments
-; Returns: nothing
+; Returns: rax = 0 on success, -1 on error
 init_cpu:
     push rbp
     mov rbp, rsp
     
     call read_cpu_stat          ; Read initial values
+    test rax, rax
+    js .done
     
     ; Store as previous values
     mov rax, [curr_total]
     mov [prev_total], rax
     mov rax, [curr_idle]
     mov [prev_idle], rax
+
+    xor rax, rax
     
+.done:
     pop rbp
     ret
 
@@ -62,7 +68,7 @@ read_cpu_stat:
     ; Read file
     mov rdi, rbx
     mov rsi, cpu_buffer
-    mov rdx, 4096
+    mov rdx, 4095              ; reserve one byte for a terminator
     call sys_read
     
     mov r12, rax                ; save bytes read
@@ -74,55 +80,95 @@ read_cpu_stat:
     ; Check if we read anything
     cmp r12, 0
     jle .error
+
+    mov byte [cpu_buffer + r12], 0
+
+    ; Reject truncated or unexpected input before parsing fields
+    cmp r12, 4
+    jb .error
+    cmp dword [cpu_buffer], 0x20757063  ; "cpu " in little-endian order
+    jne .error
     
     ; Parse the first line (starts with "cpu ")
-    ; Format: cpu <user> <nice> <system> <idle> <iowait> <irq> <softirq> ...
+    ; Format: cpu <user> <nice> <system> <idle> <iowait> <irq> <softirq>
+    ;             <steal> <guest> <guest_nice>
     mov rdi, cpu_buffer
     add rdi, 4                  ; skip "cpu "
     
     ; Read user time
     call skip_whitespace
     mov rdi, rax
+    mov r10, rdi
     call str_to_int
+    cmp rdi, r10
+    je .error
     mov r8, rax                 ; r8 = user
     
     ; Read nice time
     call skip_whitespace
     mov rdi, rax
+    mov r10, rdi
     call str_to_int
+    cmp rdi, r10
+    je .error
     add r8, rax                 ; r8 += nice
     
     ; Read system time
     call skip_whitespace
     mov rdi, rax
+    mov r10, rdi
     call str_to_int
+    cmp rdi, r10
+    je .error
     add r8, rax                 ; r8 += system
     
     ; Read idle time
     call skip_whitespace
     mov rdi, rax
+    mov r10, rdi
     call str_to_int
+    cmp rdi, r10
+    je .error
     mov r9, rax                 ; r9 = idle
     
     ; Read iowait time
     call skip_whitespace
     mov rdi, rax
+    mov r10, rdi
     call str_to_int
+    cmp rdi, r10
+    je .error
     add r9, rax                 ; r9 += iowait (idle + iowait = total idle)
     
     ; Read irq time
     call skip_whitespace
     mov rdi, rax
+    mov r10, rdi
     call str_to_int
+    cmp rdi, r10
+    je .error
     add r8, rax                 ; r8 += irq
     
     ; Read softirq time
     call skip_whitespace
     mov rdi, rax
+    mov r10, rdi
     call str_to_int
+    cmp rdi, r10
+    je .error
     add r8, rax                 ; r8 += softirq
+
+    ; Read steal time (CPU time involuntarily spent waiting for the hypervisor)
+    call skip_whitespace
+    mov rdi, rax
+    mov r10, rdi
+    call str_to_int
+    cmp rdi, r10
+    je .error
+    add r8, rax                 ; r8 += steal
     
     ; Calculate total = user + nice + system + idle + iowait + irq + softirq
+    ;                 + steal
     mov rax, r8
     add rax, r9                 ; total = non_idle + idle
     

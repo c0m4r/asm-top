@@ -1,5 +1,6 @@
 ; sysinfo.asm - System information (hostname, time)
 ; Intel syntax
+default abs
 
 section .data
     ; Month names (3 chars each)
@@ -21,7 +22,6 @@ section .bss
     temp_buffer: resb 32        ; Temporary buffer for int_to_str
 
 section .text
-extern sys_gethostname
 extern sys_open
 extern sys_read
 extern sys_close
@@ -102,7 +102,7 @@ get_hostname:
 
 ; get_time_string - Get formatted time string
 ; No arguments
-; Returns: rax = pointer to time string "HH:MM:SS"
+; Returns: rax = pointer to UTC time string "HH:MM:SS"
 get_time_string:
     push rbp
     mov rbp, rsp
@@ -120,7 +120,7 @@ get_time_string:
     ; Extract hours, minutes, seconds
     mov rax, [time_value]
     
-    ; Calculate seconds in current day: timestamp % 86400
+    ; Calculate seconds in the current UTC day: timestamp % 86400
     mov rcx, 86400
     xor rdx, rdx
     div rcx                     ; rax = days, rdx = seconds today

@@ -1,5 +1,6 @@
 ; memory.asm - Memory monitoring functions
 ; Intel syntax
+default abs
 
 section .data
     proc_meminfo_path: db "/proc/meminfo", 0
@@ -22,7 +23,6 @@ extern sys_open
 extern sys_read
 extern sys_close
 extern str_to_int
-extern find_char
 
 global read_mem_info
 global calculate_mem_percent
@@ -47,16 +47,15 @@ find_line:
     push r13
     push r14
     
-    mov r12, rdi                ; buffer start
-    mov r13, rsi                ; buffer size
+    mov r12, rdi                ; current line
+    mov r13, rdi                ; end of buffer (exclusive)
+    add r13, rsi
+    jc .not_found
     mov r14, rdx                ; prefix
     
 .next_line:
-    ; Check if we're past the buffer
-    mov rax, r12
-    sub rax, rdi
-    cmp rax, r13
-    jge .not_found
+    cmp r12, r13
+    jae .not_found
     
     ; Compare prefix
     mov rbx, r12                ; current line
@@ -66,6 +65,9 @@ find_line:
     movzx eax, byte [rcx]
     test al, al
     jz .found                   ; end of prefix, match!
+
+    cmp rbx, r13
+    jae .not_found
     
     movzx edx, byte [rbx]
     cmp al, dl
@@ -85,17 +87,18 @@ find_line:
     ret
     
 .skip_line:
-    ; Find next newline
-    mov rdi, r12
-    mov sil, 10                 ; '\n'
-    mov rdx, r13
-    call find_char
-    
-    test rax, rax
-    jz .not_found
-    
-    inc rax                     ; skip the newline
-    mov r12, rax
+    mov rbx, r12
+
+.scan_line:
+    cmp rbx, r13
+    jae .not_found
+    cmp byte [rbx], 10          ; '\n'
+    je .advance_line
+    inc rbx
+    jmp .scan_line
+
+.advance_line:
+    lea r12, [rbx + 1]
     jmp .next_line
     
 .not_found:
@@ -129,7 +132,7 @@ read_mem_info:
     ; Read file
     mov rdi, rbx
     mov rsi, mem_buffer
-    mov rdx, 4096
+    mov rdx, 4095              ; reserve one byte for a terminator
     call sys_read
     
     mov r12, rax                ; save bytes read
@@ -141,6 +144,8 @@ read_mem_info:
     ; Check if we read anything
     cmp r12, 0
     jle .error
+
+    mov byte [mem_buffer + r12], 0
     
     ; Find MemTotal line
     mov rdi, mem_buffer
@@ -157,7 +162,7 @@ read_mem_info:
     movzx rcx, byte [rdi]
     cmp rcx, ' '
     je .skip_ws_total_inc
-    cmp rcx, '\t'
+    cmp rcx, 9                  ; tab
     je .skip_ws_total_inc
     jmp .parse_total
 .skip_ws_total_inc:
@@ -165,7 +170,12 @@ read_mem_info:
     jmp .skip_ws_total
     
 .parse_total:
+    mov r10, rdi
     call str_to_int
+    cmp rdi, r10
+    je .error
+    test rax, rax
+    jz .error
     mov [mem_total], rax
     
     ; Find MemAvailable line
@@ -183,7 +193,7 @@ read_mem_info:
     movzx rcx, byte [rdi]
     cmp rcx, ' '
     je .skip_ws_avail_inc
-    cmp rcx, '\t'
+    cmp rcx, 9                  ; tab
     je .skip_ws_avail_inc
     jmp .parse_avail
 .skip_ws_avail_inc:
@@ -191,7 +201,12 @@ read_mem_info:
     jmp .skip_ws_avail
     
 .parse_avail:
+    mov r10, rdi
     call str_to_int
+    cmp rdi, r10
+    je .error
+    cmp rax, [mem_total]
+    ja .error
     mov [mem_available], rax
     
     ; Calculate used memory
@@ -214,7 +229,7 @@ read_mem_info:
     movzx rcx, byte [rdi]
     cmp rcx, ' '
     je .skip_ws_swaptotal_inc
-    cmp rcx, '\t'
+    cmp rcx, 9                  ; tab
     je .skip_ws_swaptotal_inc
     jmp .parse_swaptotal
 .skip_ws_swaptotal_inc:
@@ -222,7 +237,10 @@ read_mem_info:
     jmp .skip_ws_swaptotal
     
 .parse_swaptotal:
+    mov r10, rdi
     call str_to_int
+    cmp rdi, r10
+    je .error
     mov [swap_total], rax
     
     ; Find SwapFree line
@@ -240,7 +258,7 @@ read_mem_info:
     movzx rcx, byte [rdi]
     cmp rcx, ' '
     je .skip_ws_swapfree_inc
-    cmp rcx, '\t'
+    cmp rcx, 9                  ; tab
     je .skip_ws_swapfree_inc
     jmp .parse_swapfree
 .skip_ws_swapfree_inc:
@@ -248,7 +266,12 @@ read_mem_info:
     jmp .skip_ws_swapfree
     
 .parse_swapfree:
+    mov r10, rdi
     call str_to_int
+    cmp rdi, r10
+    je .error
+    cmp rax, [swap_total]
+    ja .error
     mov [swap_free], rax
     
     ; Calculate used swap

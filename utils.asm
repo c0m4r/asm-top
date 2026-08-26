@@ -1,5 +1,6 @@
 ; utils.asm - Utility functions for string/number conversion and parsing
 ; Intel syntax
+default abs
 
 section .text
 global str_to_int
@@ -109,11 +110,11 @@ skip_whitespace:
     movzx rcx, byte [rax]
     cmp rcx, ' '
     je .skip
-    cmp rcx, '\t'
+    cmp rcx, 9              ; tab
     je .skip
-    cmp rcx, '\n'
+    cmp rcx, 10             ; newline
     je .skip
-    cmp rcx, '\r'
+    cmp rcx, 13             ; carriage return
     je .skip
     ret                     ; found non-whitespace
 .skip:

@@ -1,5 +1,6 @@
 ; syscalls.asm - Low-level system call wrappers for Linux x86-64
 ; Intel syntax
+default abs
 
 section .text
 global sys_open
@@ -10,7 +11,9 @@ global sys_nanosleep
 global sys_exit
 global sys_poll
 global sys_ioctl
-global sys_gethostname
+global sys_rt_sigaction
+global sys_getpid
+global sys_kill
 global sys_time
 
 ; sys_open - Open a file
@@ -96,13 +99,32 @@ sys_ioctl:
     syscall
     ret
 
-; sys_gethostname - Get hostname
+; sys_rt_sigaction - Install or query a signal action
 ; Arguments:
-;   rdi = buffer pointer
-;   rsi = buffer length
-; Returns: 0 on success, -1 on error
-sys_gethostname:
-    mov rax, 170            ; syscall number for gethostname
+;   rdi = signal number
+;   rsi = pointer to new action (or NULL)
+;   rdx = pointer to old action (or NULL)
+;   r10 = kernel signal-set size (8 on x86-64)
+; Returns: 0 on success, negative errno on error
+sys_rt_sigaction:
+    mov rax, 13             ; syscall number for rt_sigaction
+    syscall
+    ret
+
+; sys_getpid - Get the current process ID
+; Returns: process ID in rax
+sys_getpid:
+    mov rax, 39             ; syscall number for getpid
+    syscall
+    ret
+
+; sys_kill - Send a signal to a process
+; Arguments:
+;   rdi = process ID
+;   rsi = signal number
+; Returns: 0 on success, negative errno on error
+sys_kill:
+    mov rax, 62             ; syscall number for kill
     syscall
     ret
 

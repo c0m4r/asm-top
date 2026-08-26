@@ -1,5 +1,6 @@
 ; display.asm - Display formatting and output functions
 ; Intel syntax
+default abs
 
 section .data
     ; ANSI escape sequences
@@ -12,7 +13,7 @@ section .data
     ; Display strings
     header: db "=== ASM-TOP - ", 0
     header_at: db " @ ", 0
-    header_end: db " ===", 10, 0
+    header_end: db " UTC ===", 10, 0
     uptime_label: db "uptime: ", 0
     load_label: db "  load: ", 0
     cpu_label: db "CPU:  [", 0
@@ -20,7 +21,7 @@ section .data
     swap_label: db "SWAP: [", 0
     bar_end: db "] ", 0
     percent_sign: db "%", 0
-    exit_msg: db 10, "Press 'q' to exit", 10, 0
+    exit_msg: db 10, "Press 'q' or Ctrl-C to exit", 10, 0
     newline: db 10, 0           ; Just a newline character
     
     bar_fill: db "#", 0
@@ -31,6 +32,7 @@ section .data
 
 section .bss
     temp_buffer: resb 64        ; Temporary buffer for number conversion
+    display_error: resq 1       ; Sticky output failure for the current session
 
 section .text
 extern sys_write
@@ -54,36 +56,26 @@ global display_stats
 
 ; display_init - Initialize display (clear screen, hide cursor)
 ; No arguments
+; Returns: rax = 0 on success, -1 on output error
 display_init:
     push rbp
     mov rbp, rsp
+
+    mov qword [display_error], 0
     
-    ; Clear screen
-    mov rdi, clear_screen
-    call strlen
-    mov rdx, rax
-    
-    mov rdi, 1                  ; stdout
-    mov rsi, clear_screen
-    call sys_write
-    
-    ; Enable alternate buffer
+    ; Enable alternate buffer before clearing so the primary screen is preserved
     mov rdi, alt_buffer_on
-    call strlen
-    mov rdx, rax
+    call print_string
     
-    mov rdi, 1
-    mov rsi, alt_buffer_on
-    call sys_write
+    ; Clear the alternate screen
+    mov rdi, clear_screen
+    call print_string
     
     ; Hide cursor
     mov rdi, hide_cursor
-    call strlen
-    mov rdx, rax
-    
-    mov rdi, 1
-    mov rsi, hide_cursor
-    call sys_write
+    call print_string
+
+    mov rax, [display_error]
     
     pop rbp
     ret
@@ -117,35 +109,86 @@ display_cleanup:
     mov rdi, 1                  ; stdout
     mov rsi, show_cursor
     call sys_write
+
+    xor rax, rax
     
+    pop rbp
+    ret
+
+; write_stdout - Write an entire buffer and remember any output failure
+; Arguments:
+;   rsi = buffer
+;   rdx = length
+; Returns: rax = 0 on success, -1 on error
+write_stdout:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push r12
+
+    cmp qword [display_error], 0
+    jne .failed
+
+    mov rbx, rsi
+    mov r12, rdx
+
+.write_loop:
+    test r12, r12
+    jz .success
+
+    mov rdi, 1                  ; stdout
+    mov rsi, rbx
+    mov rdx, r12
+    call sys_write
+
+    test rax, rax
+    jg .write_progress
+    cmp rax, -4                 ; EINTR: retry after the signal handler returns
+    je .write_loop
+    jmp .record_error
+
+.write_progress:
+    add rbx, rax
+    sub r12, rax
+    jmp .write_loop
+
+.record_error:
+    mov qword [display_error], -1
+
+.failed:
+    mov rax, -1
+    jmp .done
+
+.success:
+    xor rax, rax
+
+.done:
+    pop r12
+    pop rbx
     pop rbp
     ret
 
 ; print_string - Print null-terminated string
 ; Arguments:
 ;   rdi = pointer to string
-; No return value
+; Returns: rax = 0 on success, -1 on error
 print_string:
-    push rbp
-    mov rbp, rsp
     push rbx
     
     mov rbx, rdi                ; save string pointer
     call strlen
     mov rdx, rax                ; length
     
-    mov rdi, 1                  ; stdout
     mov rsi, rbx                ; string
-    call sys_write
+    call write_stdout
     
     pop rbx
-    pop rbp
     ret
 
 ; render_bar - Render a progress bar
 ; Arguments:
 ;   rdi = percentage (0-100)
-; No return value
+; Returns: rax = 0 on success, -1 on error
 render_bar:
     push rbp
     mov rbp, rsp
@@ -161,40 +204,51 @@ render_bar:
     mov rcx, 100
     xor rdx, rdx
     div rcx                     ; rax = filled count
+    cmp rax, 40
+    jbe .filled_in_range
+    mov rax, 40                 ; defensively clamp unexpected percentages
+.filled_in_range:
     mov rbx, rax                ; rbx = filled count
     
     ; Print filled portion
-    mov rcx, rbx
+    mov r12, rbx
 .fill_loop:
-    test rcx, rcx
+    test r12, r12
     jz .empty_portion
-    push rcx
     
     mov rdi, bar_fill
     call print_string
+    test rax, rax
+    js .error
     
-    pop rcx
-    dec rcx
+    dec r12
     jmp .fill_loop
     
 .empty_portion:
     ; Calculate empty portion (40 - filled)
-    mov rcx, 40
-    sub rcx, rbx
+    mov r12, 40
+    sub r12, rbx
     
 .empty_loop:
-    test rcx, rcx
+    test r12, r12
     jz .done
-    push rcx
     
     mov rdi, bar_empty
     call print_string
+    test rax, rax
+    js .error
     
-    pop rcx
-    dec rcx
+    dec r12
     jmp .empty_loop
     
 .done:
+    xor rax, rax
+    jmp .return
+
+.error:
+    mov rax, -1
+
+.return:
     pop r12
     pop rbx
     pop rbp
@@ -204,13 +258,14 @@ render_bar:
 ; Arguments:
 ;   rdi = CPU percentage
 ;   rsi = RAM percentage
-; No return value
+; Returns: rax = 0 on success, -1 on output error
 display_stats:
     push rbp
     mov rbp, rsp
     push rbx
     push r12
     push r13
+    push r14
     
     mov r12, rdi                ; save CPU%
     mov r13, rsi                ; save RAM%
@@ -286,14 +341,9 @@ display_stats:
     mov rsi, temp_buffer
     call int_to_str
     
-    mov rdi, 1                  ; stdout
     mov rsi, rax                ; string from int_to_str
     ; rdx already has length from int_to_str
-    push rax
-    push rdx
-    call sys_write
-    pop rdx
-    pop rax
+    call write_stdout
     
     ; Print percent sign
     mov rdi, percent_sign
@@ -320,13 +370,8 @@ display_stats:
     mov rsi, temp_buffer
     call int_to_str
     
-    mov rdi, 1                  ; stdout
     mov rsi, rax
-    push rax
-    push rdx
-    call sys_write
-    pop rdx
-    pop rax
+    call write_stdout
     
     ; Print percent sign
     mov rdi, percent_sign
@@ -379,13 +424,8 @@ display_stats:
     mov rsi, temp_buffer
     call int_to_str
     
-    mov rdi, 1                  ; stdout
     mov rsi, rax
-    push rax
-    push rdx
-    call sys_write
-    pop rdx
-    pop rax
+    call write_stdout
     
     ; Print percent sign
     mov rdi, percent_sign
@@ -420,7 +460,10 @@ display_stats:
     ; Print exit message
     mov rdi, exit_msg
     call print_string
-    
+
+    mov rax, [display_error]
+
+    pop r14
     pop r13
     pop r12
     pop rbx

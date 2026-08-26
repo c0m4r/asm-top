@@ -1,5 +1,6 @@
 ; format.asm - Formatting utilities for sizes
 ; Intel syntax
+default abs
 
 section .data
     kb_str: db " KB", 0
@@ -39,7 +40,7 @@ format_size_kb:
     ; Format as KB
     mov rsi, size_buffer
     call int_to_str
-    mov r13, rax                ; save string pointer
+    mov rbx, rax                ; save string pointer
     
     ; Append " KB"
     mov rsi, rax
@@ -47,7 +48,7 @@ format_size_kb:
     mov rdi, kb_str
     call append_string
     
-    mov rax, r13                ; return string pointer
+    mov rax, rbx                ; return string pointer
     pop r12
     pop rbx
     pop rbp
@@ -63,7 +64,7 @@ format_size_kb:
     mov rdi, rax
     mov rsi, size_buffer
     call int_to_str
-    mov r13, rax                ; save string pointer
+    mov rbx, rax                ; save string pointer
     
     ; Append " MB"
     mov rsi, rax
@@ -71,7 +72,7 @@ format_size_kb:
     mov rdi, mb_str
     call append_string
     
-    mov rax, r13                ; return string pointer
+    mov rax, rbx                ; return string pointer
     pop r12
     pop rbx
     pop rbp
@@ -87,7 +88,7 @@ format_size_kb:
     mov rdi, rax
     mov rsi, size_buffer
     call int_to_str
-    mov r13, rax                ; save string pointer
+    mov rbx, rax                ; save string pointer
     
     ; Append " GB"
     mov rsi, rax
@@ -95,7 +96,7 @@ format_size_kb:
     mov rdi, gb_str
     call append_string
     
-    mov rax, r13                ; return string pointer
+    mov rax, rbx                ; return string pointer
     pop r12
     pop rbx
     pop rbp
