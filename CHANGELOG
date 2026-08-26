@@ -2,3 +2,4 @@
 0.2.0 / 2025-11-22 - load average and uptime
 0.3.0 / 2025-11-22 - SWAP, Used/Total size, tasks breakdown
 0.3.1 / 2025-11-22 - fix blocking quit if scroll is used over the terminal
+0.3.2 / 2026-08-27 - code review fixes
